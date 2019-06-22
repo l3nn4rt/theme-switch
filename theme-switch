@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# theme switch for the gnome shell
+# Switch gtk theme in Gnome 3.
 # @author: l3nn4rt
 
 # SET HERE THE THEMES TO ITERATE OVER
