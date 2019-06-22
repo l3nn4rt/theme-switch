@@ -10,6 +10,26 @@ themes=(
 
 ################################################################################
 
+usage() {
+	echo "Usage: $(basename $0)"
+}
+
+check_env() {
+	err=0
+	[ "$XDG_SESSION_DESKTOP" != "gnome" ] && {
+		echo "ERROR: Gnome is not the current desktop environment" >&2
+		((err += 1))
+	}
+	[ ! `which gsettings` ] && {
+		echo "ERROR: gsettings not found" >&2
+		((err += 2))
+	}
+	return $err
+}
+
+# exit on environment error(s)
+check_env || exit $?
+
 set_theme() {
 	# cuz gesettings never fails
 	[ -f "/usr/share/themes/$1/index.theme" \
@@ -21,36 +41,45 @@ set_theme() {
 	}
 }
 
-current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
-echo "Previous theme:  $current"
+case $# in
+0)
+	current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
+	echo "Previous theme:  $current"
 
-count=${#themes[@]}
-indexes=$(seq 0 $((count - 1)))
+	count=${#themes[@]}
+	indexes=$(seq 0 $((count - 1)))
 
-# search index of the current theme in the list
-for i in $indexes; do
-	[ "${themes[i]}" = "$current" ] && break
-done
-# note: i == count - 1 if one of these cases:
-# - current theme is last list item,
-# - current theme is not in list;
-# in both cases, search next theme from list begin
-[ $? -ne 0 ] &&
-	echo "Warning: previous theme not in themes list" >&2
+	# search index of the current theme in the list
+	for i in $indexes; do
+		[ "${themes[i]}" = "$current" ] && break
+	done
+	# note: i == count - 1 if one of these cases:
+	# - current theme is last list item,
+	# - current theme is not in list;
+	# in both cases, search next theme from list begin
+	[ $? -ne 0 ] &&
+		echo "Warning: previous theme not in themes list" >&2
 
-# set next valid theme in list
-for j in $indexes; do
-	next="${themes[(i + j + 1) % count]}"
-	set_theme "$next" &&
-		break
-	echo "Warning: theme not found: $next" >&2
-	false
-done
-# fallback to last theme or Adwaita
-[ $? -gt 0 -o $count -eq 0 ] && {
-	echo "Warning: no applicable theme found (fallback)" >&2
-	set_theme $current || set_theme "Adwaita"
-}
+	# set next valid theme in list
+	for j in $indexes; do
+		next="${themes[(i + j + 1) % count]}"
+		set_theme "$next" &&
+			break
+		echo "Warning: theme in themes list not found: $next" >&2
+		false
+	done
+	# fallback to last theme or Adwaita
+	[ $? -gt 0 -o $count -eq 0 ] && {
+		echo "Warning: no valid theme in themes list (fallback)" >&2
+		set_theme $current || set_theme "Adwaita"
+	}
 
-current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
-echo "Current theme :  $current"
+	current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
+	echo "Current theme :  $current"
+	;;
+*)
+	usage && false
+	;;
+esac
+
+exit $?
