@@ -20,7 +20,7 @@ check_env() {
 		echo "ERROR: Gnome is not the current desktop environment" >&2
 		((err += 1))
 	}
-	[ ! `which gsettings` ] && {
+	hash gsettings 2>/dev/null || {
 		echo "ERROR: gsettings not found" >&2
 		((err += 2))
 	}
@@ -44,7 +44,7 @@ set_theme() {
 case $# in
 0)
 	current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
-	echo "Previous theme:  $current"
+	echo "Previous:	$current"
 
 	count=${#themes[@]}
 	indexes=$(seq 0 $((count - 1)))
@@ -75,7 +75,7 @@ case $# in
 	}
 
 	current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
-	echo "Current theme :  $current"
+	echo " Current:	$current"
 	;;
 *)
 	usage && false
