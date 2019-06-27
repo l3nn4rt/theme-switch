@@ -5,7 +5,7 @@
 # SET HERE THE LAYOUTS TO ITERATE OVER
 # Notes:
 # - strings must be separated by a single comma and no
-# unquoted space (unquoted spaces will split values);
+# unquoted space (unquoted spaces will split layouts);
 # - set <SHELL> to '' for the default shell theme.
 layouts=(
 	# '<GTK>','<ICON>','<SHELL>'
@@ -100,7 +100,7 @@ case $# in
 		valid_layouts+=("${layouts[i]}")
 	done
 
-	# if there are valid layouts
+	# set the next valid layout
 	[ ${#valid_layouts[@]} -gt 0 ] &&
 		set_layout  ${valid_layouts[ (curr + 1) % ${#valid_layouts[@]}]}
 
