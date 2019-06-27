@@ -2,10 +2,17 @@
 # Switch gtk theme in Gnome 3.
 # @author: l3nn4rt
 
-# SET HERE THE THEMES TO ITERATE OVER
-themes=(
-	Adwaita
-	Adwaita-dark
+# SET HERE THE LAYOUTS TO ITERATE OVER
+# Notes:
+# - strings must be separated by a single comma and no
+# unquoted space (unquoted spaces will split values);
+# - set <SHELL> to '' for the default shell theme.
+layouts=(
+	# '<GTK>','<ICON>','<SHELL>'
+	'Adwaita','Adwaita',''
+	'Adwaita-dark','ePapirus',''
+	'Mojave-light','ePapirus','Mojave-light'
+	'Mojave-dark','ePapirus','Mojave-dark'
 )
 
 ################################################################################
@@ -24,58 +31,80 @@ check_env() {
 		echo "ERROR: gsettings not found" >&2
 		((err += 2))
 	}
+
+	# ensure the needed extension is enabled
+	gsettings set org.gnome.shell disable-user-extensions false
+	gnome-shell-extension-tool --enable \
+		'user-theme@gnome-shell-extensions.gcampax.github.com' 2>/dev/null
+
 	return $err
 }
 
 # exit on environment error(s)
 check_env || exit $?
 
-set_theme() {
-	# cuz gesettings never fails
-	[ -f "/usr/share/themes/$1/index.theme" \
-	-o -f "$HOME/.themes/$1/index.theme" ] && {
-		gsettings set org.gnome.desktop.interface gtk-theme "$1"
-		return 0
-	} || {
-		return 1
+check_layout() {
+	IFS=, read gtk icon shell <<< "$1"
+	err=0
+	[ -f "/usr/share/themes/$gtk/index.theme" \
+		-o -f "$HOME/.themes/$gtk/index.theme" ] || {
+		echo "bad gtk: $gtk"
+		((err += 1))
 	}
+	[ -f "/usr/share/icons/$icon/index.theme" \
+		-o -f "$HOME/.icons/$icon/index.theme"  ] || {
+		echo "bad icon: $icon"
+		((err += 2))
+	}
+	[ -z "$shell" \
+		-o -f "/usr/share/themes/$shell/gnome-shell/gnome-shell.css" \
+		-o -f "$HOME/.themes/$shell/gnome-shell/gnome-shell.css" ] || {
+		echo "bad shell: $shell"
+		((err += 4))
+	}
+	return $err
+}
+
+get_layout() {
+	gtk=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
+	icon=$(gsettings get org.gnome.desktop.interface icon-theme | tr -d \')
+	shell=$(gsettings get org.gnome.shell.extensions.user-theme name | tr -d \')
+	echo "$gtk,$icon,$shell"
+}
+
+set_layout() {
+	IFS=, read gtk icon shell <<< "$1"
+	gsettings set org.gnome.desktop.interface gtk-theme "$gtk"
+	gsettings set org.gnome.desktop.interface icon-theme "$icon"
+	gsettings set org.gnome.shell.extensions.user-theme name "$shell"
+}
+
+print_layout() {
+	IFS=, read gtk icon shell <<< "$(get_layout)"
+	echo -e "{\n\t  gtk: '$gtk',\n\t icon: '$icon',\n\tshell: '$shell'\n}"
 }
 
 case $# in
 0)
-	current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
-	echo "Previous:	$current"
-
-	count=${#themes[@]}
-	indexes=$(seq 0 $((count - 1)))
-
-	# search index of the current theme in the list
-	for i in $indexes; do
-		[ "${themes[i]}" = "$current" ] && break
+	echo "Previous: $(print_layout)"
+	valid_layouts=()
+	curr=-1
+	for i in $(seq 0 $((${#layouts[@]} - 1))); do
+		# skip broken layouts
+		check_layout "${layouts[i]}" || \
+			continue
+		# save position of current layout in valid_layouts
+		[ $(get_layout) = "${layouts[i]}" ] &&
+			curr=${#valid_layouts[@]}
+		# add valid layout to valid_layouts
+		valid_layouts+=("${layouts[i]}")
 	done
-	# note: i == count - 1 if one of these cases:
-	# - current theme is last list item,
-	# - current theme is not in list;
-	# in both cases, search next theme from list begin
-	[ $? -ne 0 ] &&
-		echo "Warning: previous theme not in themes list" >&2
 
-	# set next valid theme in list
-	for j in $indexes; do
-		next="${themes[(i + j + 1) % count]}"
-		set_theme "$next" &&
-			break
-		echo "Warning: theme in themes list not found: $next" >&2
-		false
-	done
-	# fallback to last theme or Adwaita
-	[ $? -gt 0 -o $count -eq 0 ] && {
-		echo "Warning: no valid theme in themes list (fallback)" >&2
-		set_theme $current || set_theme "Adwaita"
-	}
+	# if there are valid layouts
+	[ ${#valid_layouts[@]} -gt 0 ] &&
+		set_layout  ${valid_layouts[ (curr + 1) % ${#valid_layouts[@]}]}
 
-	current=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
-	echo " Current:	$current"
+	echo " Current: $(print_layout)"
 	;;
 *)
 	usage && false
