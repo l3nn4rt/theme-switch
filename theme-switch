@@ -11,8 +11,8 @@ layouts=(
 	# '<GTK>','<ICON>','<SHELL>'
 	'Adwaita','Adwaita',''
 	'Adwaita-dark','ePapirus',''
-	'Mojave-light','ePapirus','Mojave-light'
-	'Mojave-dark','ePapirus','Mojave-dark'
+	#'Mojave-light','ePapirus','Mojave-light'
+	#'Mojave-dark','ePapirus','Mojave-dark'
 )
 
 ################################################################################
