@@ -74,9 +74,9 @@ get_layout() {
 
 set_layout() {
 	IFS=, read gtk icon shell <<< "$1"
-	gsettings set org.gnome.desktop.interface gtk-theme "$gtk"
-	gsettings set org.gnome.desktop.interface icon-theme "$icon"
-	gsettings set org.gnome.shell.extensions.user-theme name "$shell"
+	gsettings set org.gnome.desktop.interface gtk-theme "$gtk" &
+	gsettings set org.gnome.desktop.interface icon-theme "$icon" &
+	gsettings set org.gnome.shell.extensions.user-theme name "$shell" &
 }
 
 print_layout() {
