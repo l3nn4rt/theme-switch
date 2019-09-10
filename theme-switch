@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Switch gtk theme in Gnome 3.
+# Switch gtk themes in Gnome 3.
 # @author: l3nn4rt
 
-# SET HERE THE LAYOUTS TO ITERATE OVER
+# SET HERE THE THEME COMBOS TO ITERATE OVER
 # Notes:
 # - strings must be separated by a single comma and no
-# unquoted space (unquoted spaces will split layouts);
+# unquoted space (unquoted spaces will split combos);
 # - set <SHELL> to '' for the default shell theme.
-layouts=(
+combos=(
 	# '<GTK>','<ICON>','<SHELL>'
 	'Adwaita','Adwaita',''
-	'Adwaita-dark','ePapirus',''
+	'Adwaita-dark','Adwaita',''
+	#'HighContrast','HighContrast',''
 	#'Mojave-light','ePapirus','Mojave-light'
 	#'Mojave-dark','ePapirus','Mojave-dark'
 )
@@ -23,7 +24,7 @@ usage() {
 
 check_env() {
 	err=0
-	[ "$XDG_SESSION_DESKTOP" != "gnome" ] && {
+	[[ ! "$XDG_SESSION_DESKTOP" =~ gnome* ]] && {
 		echo "ERROR: Gnome is not the current desktop environment" >&2
 		((err += 1))
 	}
@@ -43,7 +44,7 @@ check_env() {
 # exit on environment error(s)
 check_env || exit $?
 
-check_layout() {
+check_combo() {
 	IFS=, read gtk icon shell <<< "$1"
 	err=0
 	[ -f "/usr/share/themes/$gtk/index.theme" \
@@ -65,46 +66,48 @@ check_layout() {
 	return $err
 }
 
-get_layout() {
+get_combo() {
 	gtk=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
 	icon=$(gsettings get org.gnome.desktop.interface icon-theme | tr -d \')
 	shell=$(gsettings get org.gnome.shell.extensions.user-theme name | tr -d \')
 	echo "$gtk,$icon,$shell"
 }
 
-set_layout() {
+set_combo() {
 	IFS=, read gtk icon shell <<< "$1"
-	gsettings set org.gnome.desktop.interface gtk-theme "$gtk" &
-	gsettings set org.gnome.desktop.interface icon-theme "$icon" &
-	gsettings set org.gnome.shell.extensions.user-theme name "$shell" &
+	# concurrent procs will slightly speed-up the script,
+	# but won't gurantee the output correctness
+	gsettings set org.gnome.desktop.interface gtk-theme "$gtk" #&
+	gsettings set org.gnome.desktop.interface icon-theme "$icon" #&
+	gsettings set org.gnome.shell.extensions.user-theme name "$shell" #&
 }
 
-print_layout() {
-	IFS=, read gtk icon shell <<< "$(get_layout)"
-	echo -e "{\n\t  gtk: '$gtk',\n\t icon: '$icon',\n\tshell: '$shell'\n}"
+print_combo() {
+	IFS=, read gtk icon shell <<< "$(get_combo)"
+	echo "{ gtk: '$gtk', icon: '$icon', shell: '$shell' }"
 }
 
 case $# in
 0)
-	echo "Previous: $(print_layout)"
-	valid_layouts=()
+	printf "Previous: "; print_combo
+	valid_combos=()
 	curr=-1
-	for i in $(seq 0 $((${#layouts[@]} - 1))); do
-		# skip broken layouts
-		check_layout "${layouts[i]}" || \
+	for i in $(seq 0 $((${#combos[@]} - 1))); do
+		# skip broken combos
+		check_combo "${combos[i]}" || \
 			continue
-		# save position of current layout in valid_layouts
-		[ $(get_layout) = "${layouts[i]}" ] &&
-			curr=${#valid_layouts[@]}
-		# add valid layout to valid_layouts
-		valid_layouts+=("${layouts[i]}")
+		# save position of current combo in valid_combos
+		[ $(get_combo) = "${combos[i]}" ] &&
+			curr=${#valid_combos[@]}
+		# add valid combo to valid_combos
+		valid_combos+=("${combos[i]}")
 	done
 
-	# set the next valid layout
-	[ ${#valid_layouts[@]} -gt 0 ] &&
-		set_layout  ${valid_layouts[ (curr + 1) % ${#valid_layouts[@]}]}
+	# set the next valid combo
+	[ ${#valid_combos[@]} -gt 0 ] &&
+		set_combo  ${valid_combos[ (curr + 1) % ${#valid_combos[@]}]}
 
-	echo " Current: $(print_layout)"
+	printf " Current: "; print_combo
 	;;
 *)
 	usage && false
