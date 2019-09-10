@@ -83,13 +83,14 @@ set_combo() {
 }
 
 print_combo() {
-	IFS=, read gtk icon shell <<< "$(get_combo)"
+	IFS=, read gtk icon shell <<< "$1"
 	echo "{ gtk: '$gtk', icon: '$icon', shell: '$shell' }"
 }
 
 case $# in
 0)
-	printf "Previous: "; print_combo
+	curr_combo=$(get_combo)
+	printf "Previous: "; print_combo "$curr_combo"
 	valid_combos=()
 	curr=-1
 	for i in $(seq 0 $((${#combos[@]} - 1))); do
@@ -97,7 +98,7 @@ case $# in
 		check_combo "${combos[i]}" || \
 			continue
 		# save position of current combo in valid_combos
-		[ $(get_combo) = "${combos[i]}" ] &&
+		[ "$curr_combo" = "${combos[i]}" ] &&
 			curr=${#valid_combos[@]}
 		# add valid combo to valid_combos
 		valid_combos+=("${combos[i]}")
@@ -107,7 +108,8 @@ case $# in
 	[ ${#valid_combos[@]} -gt 0 ] &&
 		set_combo  ${valid_combos[ (curr + 1) % ${#valid_combos[@]}]}
 
-	printf " Current: "; print_combo
+	curr_combo=$(get_combo)
+	printf " Current: "; print_combo "$curr_combo"
 	;;
 *)
 	usage && false
