@@ -12,8 +12,6 @@ combos=(
 	'Adwaita','Adwaita',''
 	'Adwaita-dark','Adwaita',''
 	#'HighContrast','HighContrast',''
-	#'Mojave-light','ePapirus','Mojave-light'
-	#'Mojave-dark','ePapirus','Mojave-dark'
 )
 
 ################################################################################
@@ -32,12 +30,10 @@ check_env() {
 		echo "ERROR: gsettings not found" >&2
 		((err += 2))
 	}
-
 	# ensure the needed extension is enabled
 	gsettings set org.gnome.shell disable-user-extensions false
 	gnome-shell-extension-tool --enable \
 		'user-theme@gnome-shell-extensions.gcampax.github.com' 2>/dev/null
-
 	return $err
 }
 
@@ -49,18 +45,18 @@ check_combo() {
 	err=0
 	[ -f "/usr/share/themes/$gtk/index.theme" \
 		-o -f "$HOME/.themes/$gtk/index.theme" ] || {
-		echo "bad gtk: $gtk"
+		echo "Warning: bad gtk: '$gtk'" >&2
 		((err += 1))
 	}
 	[ -f "/usr/share/icons/$icon/index.theme" \
 		-o -f "$HOME/.icons/$icon/index.theme"  ] || {
-		echo "bad icon: $icon"
+		echo "Warning: bad icon: '$icon'" >&2
 		((err += 2))
 	}
 	[ -z "$shell" \
 		-o -f "/usr/share/themes/$shell/gnome-shell/gnome-shell.css" \
 		-o -f "$HOME/.themes/$shell/gnome-shell/gnome-shell.css" ] || {
-		echo "bad shell: $shell"
+		echo "Warning: bad shell: '$shell'" >&2
 		((err += 4))
 	}
 	return $err
@@ -75,41 +71,43 @@ get_combo() {
 
 set_combo() {
 	IFS=, read gtk icon shell <<< "$1"
-	# concurrent procs will slightly speed-up the script,
-	# but won't gurantee the output correctness
-	gsettings set org.gnome.desktop.interface gtk-theme "$gtk" #&
-	gsettings set org.gnome.desktop.interface icon-theme "$icon" #&
-	gsettings set org.gnome.shell.extensions.user-theme name "$shell" #&
+	gsettings set org.gnome.desktop.interface gtk-theme "$gtk" &
+	gsettings set org.gnome.desktop.interface icon-theme "$icon" &
+	gsettings set org.gnome.shell.extensions.user-theme name "$shell" &
 }
 
 print_combo() {
 	IFS=, read gtk icon shell <<< "$1"
-	echo "{ gtk: '$gtk', icon: '$icon', shell: '$shell' }"
+	[ -z "$shell" ] && shell="<none>"
+	echo "{ gtk: $gtk, icon: $icon, shell: $shell }"
 }
 
 case $# in
 0)
-	curr_combo=$(get_combo)
-	printf "Previous: "; print_combo "$curr_combo"
+	curr=$(get_combo)
+	printf "Previous: "; print_combo "$curr"
 	valid_combos=()
-	curr=-1
+	curr_idx=-1
 	for i in $(seq 0 $((${#combos[@]} - 1))); do
 		# skip broken combos
 		check_combo "${combos[i]}" || \
 			continue
 		# save position of current combo in valid_combos
-		[ "$curr_combo" = "${combos[i]}" ] &&
-			curr=${#valid_combos[@]}
+		[ "$curr" = "${combos[i]}" ] &&
+			curr_idx=${#valid_combos[@]}
 		# add valid combo to valid_combos
 		valid_combos+=("${combos[i]}")
 	done
-
-	# set the next valid combo
-	[ ${#valid_combos[@]} -gt 0 ] &&
-		set_combo  ${valid_combos[ (curr + 1) % ${#valid_combos[@]}]}
-
-	curr_combo=$(get_combo)
-	printf " Current: "; print_combo "$curr_combo"
+	# if there are valid combos
+	[ ${#valid_combos[@]} -gt 0 ] && {
+		# set the next valid one
+		next=${valid_combos[ (curr_idx + 1) % ${#valid_combos[@]}]}
+		set_combo $next
+		printf " Current: "; print_combo "$next"
+	} || {
+		echo "Warning: could not find a valid combo." >&2
+		false
+	}
 	;;
 *)
 	usage && false
