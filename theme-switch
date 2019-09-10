@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Switch gtk themes in Gnome 3.
+# Switch gtk, icon and shell themes in Gnome 3.
 # @author: l3nn4rt
 
 # SET HERE THE THEME COMBOS TO ITERATE OVER
@@ -49,7 +49,7 @@ check_combo() {
 		((err += 1))
 	}
 	[ -f "/usr/share/icons/$icon/index.theme" \
-		-o -f "$HOME/.icons/$icon/index.theme"  ] || {
+		-o -f "$HOME/.icons/$icon/index.theme" ] || {
 		echo "Warning: bad icon: '$icon'" >&2
 		((err += 2))
 	}
