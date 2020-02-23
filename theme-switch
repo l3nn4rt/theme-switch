@@ -26,12 +26,12 @@ check_env() {
 		echo "ERROR: Gnome is not the current desktop environment" >&2
 		((err += 1))
 	}
-	hash gsettings 2>/dev/null || {
-		echo "ERROR: gsettings not found" >&2
+	hash dconf 2>/dev/null || {
+		echo "ERROR: dconf not found" >&2
 		((err += 2))
 	}
 	# ensure the needed extension is enabled
-	gsettings set org.gnome.shell disable-user-extensions false
+	dconf write /org/gnome/shell/disable-user-extensions false
 	gnome-shell-extension-tool --enable \
 		'user-theme@gnome-shell-extensions.gcampax.github.com' 2>/dev/null
 	return $err
@@ -63,17 +63,17 @@ check_combo() {
 }
 
 get_combo() {
-	gtk=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d \')
-	icon=$(gsettings get org.gnome.desktop.interface icon-theme | tr -d \')
-	shell=$(gsettings get org.gnome.shell.extensions.user-theme name | tr -d \')
+	gtk=$(dconf read /org/gnome/desktop/interface/gtk-theme | tr -d \')
+	icon=$(dconf read /org/gnome/desktop/interface/icon-theme | tr -d \')
+	shell=$(dconf read /org/gnome/shell/extensions/user-theme/name | tr -d \')
 	echo "$gtk,$icon,$shell"
 }
 
 set_combo() {
 	IFS=, read gtk icon shell <<< "$1"
-	gsettings set org.gnome.desktop.interface gtk-theme "$gtk" &
-	gsettings set org.gnome.desktop.interface icon-theme "$icon" &
-	gsettings set org.gnome.shell.extensions.user-theme name "$shell" &
+	dconf write /org/gnome/desktop/interface/gtk-theme "'$gtk'" &
+	dconf write /org/gnome/desktop/interface/icon-theme "'$icon'" &
+	dconf write /org/gnome/shell/extensions/user-theme/name "'$shell'" &
 }
 
 print_combo() {
