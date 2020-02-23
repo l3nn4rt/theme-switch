@@ -32,8 +32,7 @@ check_env() {
 	}
 	# ensure the needed extension is enabled
 	dconf write /org/gnome/shell/disable-user-extensions false
-	gnome-shell-extension-tool --enable \
-		'user-theme@gnome-shell-extensions.gcampax.github.com' 2>/dev/null
+	gnome-extensions enable 'user-theme@gnome-shell-extensions.gcampax.github.com'
 	return $err
 }
 
